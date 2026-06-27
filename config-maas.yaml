@@ -1,0 +1,33 @@
+# =============================================================================
+# Hermes Agent SWE-bench 测试配置 — 华为云 MaaS glm-5.1
+# =============================================================================
+model:
+  name: "glm-5.1"
+  provider: "custom"
+  base_url: "http://your-api-endpoint/v1"  # 替换为你的 OpenAI-compatible API endpoint
+  api_key_env: "YOUR_API_KEY_ENV_VAR"       # 设置环境变量，如 export YOUR_API_KEY_ENV_VAR=sk-xxx
+
+swebench:
+  dataset: "princeton-nlp/SWE-bench_Verified"
+  split: "test"
+  instance_ids:
+    - "pallets__flask-5014"
+    - "psf__requests-1142"
+
+metrics:
+  pricing:
+    input_per_mtok: 0.50
+    output_per_mtok: 0.50
+  output_dir: "./results"
+  token_dashboard_port: 9120
+
+runner:
+  max_workers: 2
+  instance_timeout: 600
+  cache_level: "instance"
+  run_id_prefix: "hermes-swe-"
+
+benchmark:
+  num_instances: 2
+  max_tokens: 1024
+  concurrent: 3

@@ -1,0 +1,20 @@
+# HumanEval evaluation configuration example
+# Copy this file and edit for your model endpoint.
+# API keys are read from environment variables — NEVER hardcode keys here.
+model:
+  name: "your-model"
+  provider: "openai"                # or "custom" for non-OpenAI endpoints
+  base_url: "https://api.openai.com/v1"
+  api_key_env: "OPENAI_API_KEY"     # env var name, e.g. export OPENAI_API_KEY=sk-...
+
+# Optional per-model endpoint overrides for multi-model comparisons
+# model_endpoints:
+#   deepseek-v4-pro:
+#     base_url: "https://your-deepseek-endpoint/v1"
+#     api_key_env: "DEEPSEEK_API_KEY"
+
+swebench:
+  dataset: "openai/humaneval"
+  split: "test"
+metrics:
+  output_dir: "./results"
