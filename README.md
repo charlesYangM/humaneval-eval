@@ -1,5 +1,10 @@
 # HumanEval Eval
 
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org)
+[![Tests](https://img.shields.io/badge/Tests-75%20passed-green.svg)](tests/)
+[![Code Style](https://img.shields.io/badge/code%20style-pep8-ff69b4.svg)](https://www.python.org/dev/peps/pep-0008/)
+
 Python-based LLM code generation evaluation framework with concurrent execution, sandboxed code running, structured logging, and SQLite persistence with automatic schema migration.
 
 ## Features
