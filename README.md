@@ -85,6 +85,38 @@ pytest tests/ -v
 
 75 tests covering: code extraction, scoring logic, sandbox execution, quality metrics, DB roundtrip, schema migration.
 
+## Reporting
+
+After running with `--db`, use `--from-db RUN_ID` to regenerate the comparison report.
+
+Output is a cross-tabulation table:
+
+```
+| 用例 | 能力 | deepseek-chat |
+|------|------|---------------|
+| HumanEval/0<br>`has_close_elements` | 条件判断 | 8.0 T:626ms P:10.5ms/t E:2.4s K:333 |
+| **p50** | 8.0 T:626ms P:10.5ms/t E:2.2s K:287 |
+| **p80** | 8.0 T:929ms P:13.1ms/t E:2.4s K:333 |
+| **avg** | 8.0 T:726ms P:11.2ms/t E:2.1s K:278 |
+```
+
+Where each cell:
+
+| Code | Stands for | Description |
+|------|-----------|-------------|
+| **S** | Score (0–10) | 6(pass) + quality(0–4). 0 if failed |
+| **T** | TTFT | Time to First Token (lower = faster response) |
+| **P** | TPOT | Time Per Output Token (lower = faster generation) |
+| **E** | E2E | End-to-end latency from request to complete response |
+| **K** | Tokens | Output token count (input + output combined) |
+
+Bottom summary rows: **p50**, **p80**, and **avg** for each metric across all problems.
+
+```bash
+# Regenerate report from a previous run
+python3 humaneval_eval.py --from-db 20260627_175705_deepseek-chat
+```
+
 ## Database
 
 SQLite DB (`humaneval_eval.db`) is created automatically on first run. Schema auto-migrates on startup — no manual ALTER TABLE needed.
