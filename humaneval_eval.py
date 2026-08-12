@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
 """
-HumanEval 多层代码正确性评估
+HumanEval multi-layer code correctness evaluation
 
-用法:
-  # 单模型 (用 config.yaml 的模型配置)
+Usage:
+  # Single model (uses the model config in config.yaml)
   python3 humaneval_eval.py --config config.yaml --num 20
 
-  # 多模型对比 (通过 New API 路由)
+  # Multi-model comparison (via API gateway routing)
   python3 humaneval_eval.py --config config.yaml \\
       --models deepseek-v4-pro,anthropic/claude-opus-4.7 \\
       --num 30
 
-  # 指定某模型的特殊 endpoint
+  # Per-model endpoint override
   python3 humaneval_eval.py --config config.yaml \\
       --models deepseek-v4-pro,glm-5.1 \\
       --model-endpoint glm-5.1=https://xxx.com/openai/v1 \\
       --num 20
 
-评估层级:
-  Layer 0: 语法检查 (0 分门槛)
-  Layer 1: 功能正确性 — 运行 HumanEval test, 0 分门槛
-  Layer 2: 代码质量  — 圈复杂度 (0-3) + 代码行数 (±1), clamp 0-4
-  Layer 3: 运行时效率 — vs 标准解的实际执行速度 (仅记录)
+Evaluation layers:
+  Layer 0: Syntax check (0-score gate)
+  Layer 1: Functional correctness — run HumanEval test, 0-score gate
+  Layer 2: Code quality — cyclomatic complexity (0-3) + line count (±1), clamp 0-4
+  Layer 3: Runtime efficiency — execution speed vs canonical solution (record-only)
   ────────────────────────────────────
-  总分: 10 分 (Layer 1 不通过则 0 分)
+  Total: 10 points (0 if Layer 1 fails)
 
-服务性能指标 (同步测量):
-  TTFT  — Time to First Token (流式首包延迟)
-  TPOT  — Time Per Output Token (流式生成速率)
-  E2E   — 端到端延迟
-  RPM   — 并发吞吐量 (非流式)
+Serving metrics (measured in sync):
+  TTFT  — Time to First Token (streaming first-packet latency)
+  TPOT  — Time Per Output Token (streaming generation rate)
+  E2E   — End-to-end latency
+  RPM   — Concurrent throughput (non-streaming)
 """
 import argparse, ast, json, os, re, sys, time, signal, logging, subprocess, resource, struct
 from pathlib import Path
@@ -185,10 +185,10 @@ class EvalLogger:
             return
         if self._lv >= 1:
             print(f"\n{'─'*60}")
-            print(f"  汇总: {self._stats['tests_passed']}/{self._stats['tests_run']} 通过 "
-                  f"| API错误: {self._stats['api_errors']} "
-                  f"| 沙箱超时: {self._stats['sandbox_timeouts']} "
-                  f"| 沙箱崩溃: {self._stats['sandbox_crashes']}")
+            print(f"  Summary: {self._stats['tests_passed']}/{self._stats['tests_run']} passed "
+                  f"| API errors: {self._stats['api_errors']} "
+                  f"| Sandbox timeouts: {self._stats['sandbox_timeouts']} "
+                  f"| Sandbox crashes: {self._stats['sandbox_crashes']}")
             print(f"{'─'*60}")
 
     def flush_json(self):
@@ -367,12 +367,13 @@ def _require_sqlite3():
         return sqlite3
     except ImportError:
         sys.exit(
-            "错误: 当前 Python 环境缺少 sqlite3 模块, 无法使用数据库功能"
-            "(--db/--list/--from-db)。\n"
-            "  ① 只跑评测: 去掉 --db 参数即可, 报告仍可加 --output <file.md> 落盘;\n"
-            "  ② 安装 SQLite: Ubuntu/Debian 执行 sudo apt-get install -y libsqlite3-0, "
-            "Alpine 执行 apk add sqlite;\n"
-            "  ③ 或换用官方 Python (自带 sqlite3)。"
+            "Error: sqlite3 module not available in this Python environment; "
+            "database features (--db/--list/--from-db) require SQLite.\n"
+            "  1) Run evaluation only: drop the --db flag; the report is still "
+            "printed to the terminal or saved via --output <file.md>.\n"
+            "  2) Install SQLite: Ubuntu/Debian: sudo apt-get install -y libsqlite3-0; "
+            "Alpine: apk add sqlite;\n"
+            "  3) Or use an official Python build (bundles sqlite3)."
         )
 
 
@@ -1092,19 +1093,19 @@ def build_score_explanation(result: dict) -> str:
     if result.get("error"):
         return f"❌ {result['error'][:60]}"
 
-    parts.append(f"基准分=6.0（测试通过）")
+    parts.append(f"Base=6.0 (tests passed)")
 
     q = result.get("layers", {}).get("quality", {})
     if q:
         cc = q.get("cyclomatic_complexity", "?")
-        parts.append(f"CC={cc}→{q.get('cc_score',0)}分")
+        parts.append(f"CC={cc}→{q.get('cc_score',0)}pts")
         ln = q.get("lines", "?")
-        parts.append(f"行数={ln}→{q.get('lines_score',0)}分")
-        parts.append(f"质量小计={q.get('total',0)}/4")
+        parts.append(f"Lines={ln}→{q.get('lines_score',0)}pts")
+        parts.append(f"Quality subtotal={q.get('total',0)}/4")
 
     e = result.get("layers", {}).get("efficiency", {})
     if e and e.get("ratio") is not None:
-        parts.append(f"效率比={e['ratio']:.2f}x")
+        parts.append(f"Efficiency ratio={e['ratio']:.2f}x")
 
     sv = result.get("serving", {})
     if sv.get("ttft_s"):
@@ -1450,29 +1451,29 @@ def build_comparison_table(all_results: dict, model_names: list,
 
 def main():
     global log
-    parser = argparse.ArgumentParser(description="HumanEval 多层代码正确性评估")
-    parser.add_argument("--config", default="config.yaml", help="配置文件路径")
+    parser = argparse.ArgumentParser(description="HumanEval multi-layer code correctness evaluation")
+    parser.add_argument("--config", default="config.yaml", help="Path to the config file")
     parser.add_argument("--models", default=None,
-                        help="模型名列表, 逗号分隔 (覆盖 config 中的 model.name)")
+                        help="Comma-separated model names (overrides config model.name)")
     parser.add_argument("--model-endpoint", action="append", default=[],
-                        help="指定某模型的特殊 base_url, 格式 name=url")
-    parser.add_argument("--num", type=int, default=20, help="每个模型测试的问题数")
-    parser.add_argument("--max-tokens", type=int, default=1024, help="每个请求的最大 token")
-    parser.add_argument("--concurrent", type=int, default=3, help="RPM 并发数")
-    parser.add_argument("--output", default=None, help="报告输出路径 (默认输出到终端)")
+                        help="Override base_url for a specific model, format name=url")
+    parser.add_argument("--num", type=int, default=20, help="Number of problems to test per model")
+    parser.add_argument("--max-tokens", type=int, default=1024, help="Max generation tokens per request")
+    parser.add_argument("--concurrent", type=int, default=3, help="Concurrent worker threads")
+    parser.add_argument("--output", default=None, help="Report output path (default: terminal)")
     parser.add_argument("--obsidian", action="store_true",
-                        help="保存到 Obsidian Vault (20_testRecord/ 目录)")
+                        help="Also save the report to an Obsidian Vault (20_testRecord/)")
     parser.add_argument("--db", action="store_true",
-                        help="评估结果写入 SQLite 数据库")
+                        help="Persist evaluation results to SQLite database")
     parser.add_argument("--from-db", default=None, nargs="?",
-                        help="从 DB 读取指定 run_id 生成报告, 不调用 API")
+                        help="Regenerate report from a stored run_id without calling the API")
     parser.add_argument("--list", action="store_true",
-                        help="列出 DB 中所有可用 run")
+                        help="List all historical runs in the DB")
     parser.add_argument("--log-level", default="normal",
                         choices=["quiet", "normal", "verbose", "json"],
-                        help="日志级别: quiet=仅错误, normal=进度+结果, verbose=调试, json=机器可读")
+                        help="Log level: quiet=errors only, normal=progress+results, verbose=debug, json=machine-readable")
     parser.add_argument("--lang", default="en", choices=["en", "zh"],
-                        help="报告语言: en=English (默认), zh=中文")
+                        help="Report language: en (default) / zh")
     args = parser.parse_args()
 
     # 初始化日志
@@ -1482,9 +1483,9 @@ def main():
     if args.list:
         runs = list_runs()
         if not runs:
-            log.progress("DB 中无记录")
+            log.progress("No runs in the DB")
         else:
-            log.progress(f"{'run_id':<30s} {'时间':<25s} {'模型':<30s} {'通过':>8s} {'平均分':>8s}")
+            log.progress(f"{'run_id':<30s} {'Time':<25s} {'Model':<30s} {'Passed':>8s} {'Avg Score':>10s}")
             log.progress("-" * 100)
             for r in runs:
                 log.progress(f"{r['run_id']:<30s} {r['timestamp']:<25s} {r['model_name']:<30s} "
@@ -1494,7 +1495,7 @@ def main():
 
     if args.from_db is not None:
         if args.from_db == "":
-            log.progress("用法: --from-db run_id 或 --from-db run_id1,run_id2")
+            log.progress("Usage: --from-db run_id or --from-db run_id1,run_id2")
             log.flush_json()
             return
         run_ids = [r.strip() for r in args.from_db.split(",")]
@@ -1610,7 +1611,7 @@ def main():
         all_results[model_name] = model_results
 
         # ── RPM 测量 (保持原有并发) ──
-        log.section(f"测量 RPM ({args.concurrent} 并发)")
+        log.section(f"Measuring RPM ({args.concurrent} concurrent)")
         rpm_prompts = [problems[i]["prompt"] for i in range(min(args.concurrent, len(problems)))]
         rpm_result = measure_rpm(
             model_name, rpm_prompts,
@@ -1618,7 +1619,7 @@ def main():
             concurrent=args.concurrent, max_tokens=args.max_tokens
         )
         all_results[model_name + "__rpm"] = rpm_result
-        log.progress(f"  RPM = {rpm_result['avg']} req/min ({args.concurrent}并发)")
+        log.progress(f"  RPM = {rpm_result['avg']} req/min ({args.concurrent} concurrent)")
 
     # 收集服务性能汇总
     serving_summary = {}
