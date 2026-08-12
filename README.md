@@ -60,6 +60,7 @@ python3 humaneval_eval.py --from-db YOUR_RUN_ID
 | `--from-db` | — | Regenerate a report from a stored run_id without calling the API |
 | `--list` | off | List all historical runs in the DB |
 | `--log-level` | `normal` | Logging level: `quiet` / `normal` / `verbose` / `json` |
+| `--lang` | `en` | Report language: `en` (default) / `zh` |
 
 > Tip: combine `--num` with `--concurrent` to control runtime — e.g. `--num 10 --concurrent 3` takes ~10s; `--num 164` runs the full dataset.
 

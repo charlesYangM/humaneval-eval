@@ -62,6 +62,7 @@ python3 humaneval_eval.py --from-db YOUR_RUN_ID
 | `--from-db` | 无 | 从 DB 读取指定 run_id 重新生成报告，不调用 API |
 | `--list` | off | 列出 DB 中所有历史运行记录 |
 | `--log-level` | `normal` | 日志级别：`quiet` 仅错误 / `normal` 进度+结果 / `verbose` 调试 / `json` 机器可读 |
+| `--lang` | `en` | 报告语言：`en` 英文（默认）/ `zh` 中文 |
 
 > 提示：`--num` 与 `--concurrent` 组合可控制单次评估耗时——例如 `--num 10 --concurrent 3` 约 10 秒，`--num 164` 跑完整数据集。
 
