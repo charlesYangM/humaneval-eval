@@ -1257,7 +1257,8 @@ L10N = {
 
 
 def build_comparison_table(all_results: dict, model_names: list,
-                           serving_summary: dict = None, lang: str = "en") -> str:
+                           serving_summary: dict = None, lang: str = "en",
+                           show_db: bool = False) -> str:
     """生成多模型对比 Markdown 报告
     格式: 用例为行 | 模型为列 | 每格: 总分 T:TTFT E:E2E K:Tokens
           底部 p50/p80/avg 汇总行
@@ -1276,7 +1277,8 @@ def build_comparison_table(all_results: dict, model_names: list,
     lines.append(L["title"])
     lines.append(f"")
     lines.append(L["dataset"].format(n=num_problems, t=time.strftime('%Y-%m-%d %H:%M UTC')))
-    lines.append(L["database"].format(db=DB_PATH))
+    if show_db:
+        lines.append(L["database"].format(db=DB_PATH))
     lines.append(f"")
     lines.append(f"---")
     lines.append(f"")
@@ -1506,7 +1508,7 @@ def main():
             all_results[mname] = d["results"]
             all_results[mname + "__rpm"] = {}
             serving_summary[mname] = {}
-        report = build_comparison_table(all_results, model_names, serving_summary, lang=args.lang)
+        report = build_comparison_table(all_results, model_names, serving_summary, lang=args.lang, show_db=True)
         log.progress(report)
 
         if args.output:
@@ -1625,7 +1627,7 @@ def main():
             serving_summary[m] = all_results[m + "__rpm"]
 
     # 生成对比报告
-    report = build_comparison_table(all_results, model_names, serving_summary, lang=args.lang)
+    report = build_comparison_table(all_results, model_names, serving_summary, lang=args.lang, show_db=args.db)
     log.progress(report)
 
     # ── JSON 日志输出（含原始模型响应，便于回溯） ──
