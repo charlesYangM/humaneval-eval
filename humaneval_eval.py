@@ -31,7 +31,7 @@ HumanEval 多层代码正确性评估
   E2E   — 端到端延迟
   RPM   — 并发吞吐量 (非流式)
 """
-import argparse, ast, json, os, re, sys, time, signal, sqlite3, logging, subprocess, resource, struct
+import argparse, ast, json, os, re, sys, time, signal, logging, subprocess, resource, struct
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import OrderedDict
@@ -356,8 +356,29 @@ def _migrate_db_schema(conn):
     conn.commit()
 
 
+def _require_sqlite3():
+    """惰性加载 sqlite3 — 仅 --db/--list/--from-db 功能需要。
+
+    纯评测模式(终端报告 / --output 落盘)不依赖 SQLite,
+    客户环境缺 sqlite3 模块时也能完整跑完评估。
+    """
+    try:
+        import sqlite3
+        return sqlite3
+    except ImportError:
+        sys.exit(
+            "错误: 当前 Python 环境缺少 sqlite3 模块, 无法使用数据库功能"
+            "(--db/--list/--from-db)。\n"
+            "  ① 只跑评测: 去掉 --db 参数即可, 报告仍可加 --output <file.md> 落盘;\n"
+            "  ② 安装 SQLite: Ubuntu/Debian 执行 sudo apt-get install -y libsqlite3-0, "
+            "Alpine 执行 apk add sqlite;\n"
+            "  ③ 或换用官方 Python (自带 sqlite3)。"
+        )
+
+
 def _init_db():
     """初始化数据库表"""
+    sqlite3 = _require_sqlite3()
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute("""CREATE TABLE IF NOT EXISTS eval_runs (
@@ -393,6 +414,7 @@ def _init_db():
 
 def save_to_db(run_id: str, model_name: str, base_url: str, results: list):
     """将评估结果写入数据库"""
+    sqlite3 = _require_sqlite3()
     _init_db()
     conn = sqlite3.connect(DB_PATH)
 
@@ -436,6 +458,7 @@ def save_to_db(run_id: str, model_name: str, base_url: str, results: list):
 
 def load_from_db(run_ids: list) -> dict:
     """从数据库读取评估结果. 支持前缀匹配 (传时间戳前缀加载同次所有模型)"""
+    sqlite3 = _require_sqlite3()
     _init_db()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -501,7 +524,8 @@ def load_from_db(run_ids: list) -> dict:
 
 
 def list_runs() -> list:
-    """列出所有可用的评估运行"""
+    """列出所有历史 run"""
+    sqlite3 = _require_sqlite3()
     _init_db()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
