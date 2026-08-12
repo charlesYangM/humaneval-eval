@@ -22,6 +22,7 @@ backup/
 # Results / reports / data
 results/
 *.json
+*.xlsx
 
 # Logs
 logs/
