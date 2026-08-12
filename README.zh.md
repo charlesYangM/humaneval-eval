@@ -46,6 +46,25 @@ python3 humaneval_eval.py --list
 python3 humaneval_eval.py --from-db YOUR_RUN_ID
 ```
 
+## 命令行参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--config` | `config.yaml` | 配置文件路径 |
+| `--models` | config 中的 `model.name` | 要评估的模型名，逗号分隔多个（覆盖配置文件） |
+| `--model-endpoint` | 无 | 指定某模型的 base_url 覆盖，格式 `模型名=url`，可重复传 |
+| `--num` | `20` | **每个模型测试的问题数**（HumanEval 共 164 题） |
+| `--max-tokens` | `1024` | 每个请求的最大生成 token 数 |
+| `--concurrent` | `3` | 并发解题线程数（同时并行求解的题目数） |
+| `--output` | 终端 | 报告输出到文件（默认打印到终端） |
+| `--obsidian` | off | 报告另存一份到 Obsidian Vault（20_testRecord/ 目录） |
+| `--db` | off | 评估结果写入 SQLite 数据库（humaneval_eval.db） |
+| `--from-db` | 无 | 从 DB 读取指定 run_id 重新生成报告，不调用 API |
+| `--list` | off | 列出 DB 中所有历史运行记录 |
+| `--log-level` | `normal` | 日志级别：`quiet` 仅错误 / `normal` 进度+结果 / `verbose` 调试 / `json` 机器可读 |
+
+> 提示：`--num` 与 `--concurrent` 组合可控制单次评估耗时——例如 `--num 10 --concurrent 3` 约 10 秒，`--num 164` 跑完整数据集。
+
 ## 配置说明
 
 配置文件中**不存储密钥**，密钥通过环境变量传入。`api_key_env` 指定环境变量名，`api_key_env` 后面的值不是密钥本身。

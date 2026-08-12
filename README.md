@@ -44,6 +44,25 @@ python3 humaneval_eval.py --list
 python3 humaneval_eval.py --from-db YOUR_RUN_ID
 ```
 
+## CLI Reference
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `config.yaml` | Path to the config file |
+| `--models` | `model.name` in config | Comma-separated model names to evaluate (overrides config) |
+| `--model-endpoint` | — | Override `base_url` for a specific model, format `name=url`; repeatable |
+| `--num` | `20` | **Number of problems to test per model** (HumanEval has 164 in total) |
+| `--max-tokens` | `1024` | Max generation tokens per request |
+| `--concurrent` | `3` | Concurrent worker threads (problems solved in parallel) |
+| `--output` | terminal | Write the report to a file instead of stdout |
+| `--obsidian` | off | Also save the report to an Obsidian Vault (`20_testRecord/`) |
+| `--db` | off | Persist evaluation results to SQLite (`humaneval_eval.db`) |
+| `--from-db` | — | Regenerate a report from a stored run_id without calling the API |
+| `--list` | off | List all historical runs in the DB |
+| `--log-level` | `normal` | Logging level: `quiet` / `normal` / `verbose` / `json` |
+
+> Tip: combine `--num` with `--concurrent` to control runtime — e.g. `--num 10 --concurrent 3` takes ~10s; `--num 164` runs the full dataset.
+
 ## Configuration
 
 Config files reference environment variable names — **never store secrets in config files**.
